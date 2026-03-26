@@ -22,7 +22,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 from litegs.training.trainer import start
 from litegs.arguments import get_default_arg
 
-def run_test(scene_name="garden", iterations=1000, output_path=None, use_enhanced=True):
+def run_test(iterations=1000, output_path=None, use_enhanced=True):
     """运行视锥剔除增强测试"""
     
     #获取默认参数
@@ -44,13 +44,14 @@ def run_test(scene_name="garden", iterations=1000, output_path=None, use_enhance
     
     #设置场景路径和输出路径
     base_dir = Path(__file__).parent.parent.parent
-    lp.source_path = str(base_dir / "dataset" / "mipnerf360" / scene_name)
-    model_name = f"enhanced_culling_{scene_name}_{iterations}iter" if use_enhanced else f"baseline_{scene_name}_{iterations}iter"
+    # 使用现有数据集路径
+    lp.source_path = r"e:\Code\LiteGS\data\360_v2\garden"
+    model_name = f"enhanced_culling_garden_{iterations}iter" if use_enhanced else f"baseline_culling_garden_{iterations}iter"
     lp.model_path = str(base_dir / "results" / model_name)
     os.makedirs(lp.model_path, exist_ok=True)
     
     print(f"\n测试配置:")
-    print(f"  - 场景：{scene_name}")
+    print(f"  - 场景：garden (现有数据集)")
     print(f"  - 迭代次数：{iterations}")
     print(f"  - 输出目录：{lp.model_path}")
     
@@ -77,7 +78,7 @@ def run_test(scene_name="garden", iterations=1000, output_path=None, use_enhance
     if output_path:
         results = {
             "test_type": "enhanced_frustum_culling_1000iter",
-            "scene": scene_name,
+            "scene": "garden",
             "iterations": iterations,
             "use_enhanced": use_enhanced,
             "training_time_seconds": training_time,
@@ -101,7 +102,6 @@ if __name__ == "__main__":
     import argparse
     
     parser = argparse.ArgumentParser(description="视锥剔除增强 1000 迭代性能测试")
-    parser.add_argument("--scene", type=str, default="garden", help="测试场景")
     parser.add_argument("--iterations", type=int, default=1000, help="迭代次数")
     parser.add_argument("--output", type=str, required=True, help="输出结果文件路径")
     parser.add_argument("--baseline", action="store_true", help="运行 baseline 测试（不使用增强剔除）")
@@ -110,7 +110,6 @@ if __name__ == "__main__":
     
     use_enhanced = not args.baseline
     run_test(
-        scene_name=args.scene,
         iterations=args.iterations,
         output_path=args.output,
         use_enhanced=use_enhanced
