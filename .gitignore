@@ -85,5 +85,24 @@ test_*.py
 *_test.py
 pytest.ini
 
-# 文档（保留核心文档）
-# *.md 保留，但排除临时分析文件
+# 文档（排除临时分析文档，保留核心 README）
+# 排除所有中文命名的文档
+*中文*.md
+*\345\210\233*.md
+*\345\217\257*.md
+*\346\234\254*.md
+*\347\216\257*.md
+*\347\220\206*.md
+*\347\273\223*.md
+*\350\204\232*.md
+*\351\241\271*.md
+
+# 排除特定类型的文档
+*_analysis.md
+*_summary.md
+*_implementation.md
+*_workflow.md
+*_plan.md
+*_report.md
+progress_*.md
+test_*.md
