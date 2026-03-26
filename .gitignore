@@ -106,3 +106,6 @@ pytest.ini
 *_report.md
 progress_*.md
 test_*.md
+
+# 排除本地学术工作流提示词
+prompts/
