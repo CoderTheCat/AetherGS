@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 from torch.optim.lr_scheduler import _LRScheduler
+from torch.cuda.amp import GradScaler
 
 from .. import arguments
 from ..utils.wrapper import sparse_adam_update
@@ -92,4 +93,12 @@ def get_optimizer(xyz:torch.nn.Parameter,scale:torch.nn.Parameter,rot:torch.nn.P
               opt_setting.position_lr_final*spatial_lr_scale,
               max_epochs=opt_setting.position_lr_max_steps)
     
-    return optimizer,scheduler
+    #FP8 混合精度训练支持
+    grad_scaler = None
+    if opt_setting.use_fp8:
+        grad_scaler = GradScaler(init_scale=opt_setting.fp8_loss_scale)
+        print("✓ 启用 FP8 混合精度训练")
+        print(f"  - Loss Scale: {opt_setting.fp8_loss_scale}")
+        print(f"  - 起始轮次：{opt_setting.fp8_start_epoch}")
+    
+    return optimizer,scheduler,grad_scaler
