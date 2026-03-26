@@ -44,8 +44,15 @@ def run_test(iterations=1000, output_path=None, use_enhanced=True):
     
     #设置场景路径和输出路径
     base_dir = Path(__file__).parent.parent.parent
-    # 使用现有数据集路径
-    lp.source_path = r"e:\Code\LiteGS\data\360_v2\garden"
+    # 使用现有数据集路径（支持 WSL2）
+    # WSL2 路径：/mnt/e/Code/LiteGS/data/360_v2/garden
+    # Windows 路径：e:\Code\LiteGS\data\360_v2\garden
+    if sys.platform == 'linux':
+        # WSL2/Linux 环境
+        lp.source_path = "/mnt/e/Code/LiteGS/data/360_v2/garden"
+    else:
+        # Windows 环境
+        lp.source_path = r"e:\Code\LiteGS\data\360_v2\garden"
     model_name = f"enhanced_culling_garden_{iterations}iter" if use_enhanced else f"baseline_culling_garden_{iterations}iter"
     lp.model_path = str(base_dir / "results" / model_name)
     os.makedirs(lp.model_path, exist_ok=True)
