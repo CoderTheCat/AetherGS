@@ -74,6 +74,11 @@ class PipelineParams(ParamGroup):
     enable_transmitance=False
     enable_depth=False
     input_color_type='sh'#'rgb' or 'sh'
+    
+    #视锥剔除增强参数
+    enhanced_frustum_culling = False
+    culling_margin = 0.1
+    adaptive_culling = True
     def __init__(self, parser):
         super().__init__(parser, "Pipeline Parameters")
 
