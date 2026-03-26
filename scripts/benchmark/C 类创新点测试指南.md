@@ -27,13 +27,9 @@ git checkout integration/c-class_20260327_quick-wins
 
 ### 2. 准备数据集
 
-需要 Mip-NeRF360 数据集。推荐测试场景：
-- `garden` - 室外场景，中等复杂度（默认）
-- `bicycle` - 室外场景，高复杂度
-- `bonsai` - 室内场景，低复杂度
-- `counter` - 室内场景，中等复杂度
-
-数据集路径：`dataset/mipnerf360/{scene_name}/`
+使用项目现有数据集：
+- 路径：`e:\Code\LiteGS\data\360_v2\garden`
+- 场景：garden（室外场景，中等复杂度）
 
 ### 3. 创建结果目录
 
