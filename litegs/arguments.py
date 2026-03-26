@@ -89,6 +89,11 @@ class OptimizationParams(ParamGroup):
     lambda_dssim = 0.2
     reg_weight = 0.0
     learnable_viewproj = False
+    
+    #FP8 混合精度训练参数
+    use_fp8 = False
+    fp8_start_epoch = 1000
+    fp8_loss_scale = 1024.0
     def __init__(self, parser):
         super().__init__(parser, "Optimization Parameters")
 
