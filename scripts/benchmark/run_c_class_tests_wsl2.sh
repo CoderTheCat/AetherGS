@@ -4,6 +4,13 @@
 
 set -e
 
+# 激活虚拟环境
+echo "激活虚拟环境..."
+source /mnt/e/Code/LiteGS/litegs-wsl-env/bin/activate
+echo "Python 路径：$(which python)"
+echo "Python 版本：$(python --version)"
+echo ""
+
 echo "============================================================"
 echo "C 类创新点 1000 迭代快速测试（WSL2 环境）"
 echo "============================================================"
@@ -41,10 +48,10 @@ for test_info in "${TESTS[@]}"; do
     echo "============================================================"
     echo "运行：$name"
     echo "============================================================"
-    echo "命令：python $script $args"
+    echo "命令：python3 $script $args"
     echo ""
     
-    if python $script $args; then
+    if python3 $script $args; then
         echo "✅ 测试完成：$name"
         RESULTS+=("✅ $name")
     else
