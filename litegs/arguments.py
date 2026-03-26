@@ -101,7 +101,12 @@ class DensifyParams(ParamGroup):
     prune_mode='weight'#'weight','threshold'
     target_primitives=1000000
     
-
+    #渐进式密度控制参数
+    progressive_mode = 'sigmoid' #'linear', 'exponential', 'sigmoid'
+    progressive_start_epoch = 100
+    progressive_end_epoch = 1000
+    progressive_base_percent = 0.005
+    progressive_peak_percent = 0.02
 
     #discard
     densify_grad_threshold = 0.00015

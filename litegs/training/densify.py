@@ -361,4 +361,123 @@ class DensityControllerTamingGS(DensityControllerOfficial):
         #print("\n#clone:{0} #split:{1} #points:{2}".format(clone_index.sum().cpu(),split_index.sum().cpu(),xyz.shape[-1]+append_xyz.shape[-1]*append_xyz.shape[-2]))
         self._cat_tensors_to_optimizer(dict_clone,optimizer)
         return
+
+
+class DensityControllerProgressive(DensityControllerOfficial):
+    @torch.no_grad()
+    def __init__(self,screen_extent:float,densify_params:DensifyParams,bCluster:bool,init_points_num:int)->None:
+        self.target_points_num=densify_params.target_primitives
+        self.progressive_rate=densify_params.progressive_rate
+        super(DensityControllerProgressive,self).__init__(screen_extent,densify_params,bCluster,init_points_num)
+        return
     
+    @torch.no_grad()
+    def get_current_target(self,epoch:int)->int:
+        if epoch < self.densify_params.densify_from:
+            return self.init_points_num
+        if epoch >= self.densify_params.densify_until:
+            return self.target_points_num
+        progress = (epoch - self.densify_params.densify_from) / (self.densify_params.densify_until - self.densify_params.densify_from)
+        current_target = self.init_points_num + (self.target_points_num - self.init_points_num) * progress
+        return int(current_target)
+    
+    @torch.no_grad()
+    def split_and_clone(self,optimizer:torch.optim.Optimizer,epoch:int):
+        xyz,scale,rot,sh_0,sh_rest,opacity=self._get_params_from_optimizer(optimizer)
+        if self.bCluster:
+            chunk_size=xyz.shape[-1]
+            xyz,scale,rot,sh_0,sh_rest,opacity=cluster.uncluster(xyz,scale,rot,sh_0,sh_rest,opacity)
+
+        current_num = xyz.shape[-1]
+        target_num = self.get_current_target(epoch)
+        budget = max(target_num - current_num, 0)
+        
+        if budget <= 0:
+            return
+
+        clone_mask=self.get_clone_mask(scale.exp())
+        split_mask=self.get_split_mask(scale.exp())
+
+        clone_count = clone_mask.sum().item()
+        split_count = split_mask.sum().item()
+        total_available = clone_count + split_count * 2
+        
+        if total_available == 0:
+            return
+        
+        scale_factor = min(budget / total_available, 1.0)
+        
+        selected_clone_count = int(clone_count * scale_factor)
+        selected_split_count = int(split_count * scale_factor)
+        
+        if clone_count > 0:
+            clone_scores = torch.ones(clone_count, device=xyz.device)
+            clone_indices = torch.arange(clone_count, device=xyz.device)
+            if selected_clone_count < clone_count:
+                clone_indices = clone_indices[torch.randperm(clone_count)[:selected_clone_count]]
+            selected_clone_mask = torch.zeros_like(clone_mask)
+            selected_clone_mask[clone_mask.nonzero().squeeze()[clone_indices]] = True
+            clone_mask = selected_clone_mask
+        
+        if split_count > 0:
+            split_scores = torch.ones(split_count, device=xyz.device)
+            split_indices = torch.arange(split_count, device=xyz.device)
+            if selected_split_count < split_count:
+                split_indices = split_indices[torch.randperm(split_count)[:selected_split_count]]
+            selected_split_mask = torch.zeros_like(split_mask)
+            selected_split_mask[split_mask.nonzero().squeeze()[split_indices]] = True
+            split_mask = selected_split_mask
+
+        if split_mask.sum() > 0:
+            stds=scale[...,split_mask].exp()
+            means=torch.zeros((3,stds.size(-1)),device="cuda")
+            samples = torch.normal(mean=means, std=stds).unsqueeze(0)
+            transform_matrix=wrapper.CreateTransformMatrix.call_fused(torch.ones_like(scale[...,split_mask].exp()),torch.nn.functional.normalize(rot[...,split_mask],dim=0))
+            transform_matrix=transform_matrix[:3,:3]
+            shift=(samples.permute(2,0,1))@transform_matrix.permute(2,0,1)
+            shift=shift.permute(1,2,0).squeeze(0)
+            
+            split_xyz=xyz[...,split_mask]+shift
+            clone_xyz=xyz[...,clone_mask]
+            append_xyz=torch.cat((split_xyz,clone_xyz),dim=-1)
+            
+            split_scale = (scale[...,split_mask].exp() / (0.8*2)).log()
+            clone_scale = scale[...,clone_mask]
+            append_scale = torch.cat((split_scale,clone_scale),dim=-1)
+
+            split_rot=rot[...,split_mask]
+            clone_rot=rot[...,clone_mask]
+            append_rot = torch.cat((split_rot,clone_rot),dim=-1)
+
+            split_sh_0=sh_0[...,split_mask]
+            clone_sh_0=sh_0[...,clone_mask]
+            append_sh_0 = torch.cat((split_sh_0,clone_sh_0),dim=-1)
+
+            split_sh_rest=sh_rest[...,split_mask]
+            clone_sh_rest=sh_rest[...,clone_mask]
+            append_sh_rest = torch.cat((split_sh_rest,clone_sh_rest),dim=-1)
+
+            split_opacity=opacity[...,split_mask]
+            clone_opacity=opacity[...,clone_mask]
+            append_opacity = torch.cat((split_opacity,clone_opacity),dim=-1)
+
+            if self.bCluster:
+                N=append_xyz.shape[-1]
+                chunk_num=int(N/chunk_size)
+                append_limit=chunk_num*chunk_size
+                append_xyz,append_scale,append_rot,append_sh_0,append_sh_rest,append_opacity=cluster.cluster_points(
+                    chunk_size,append_xyz[...,:append_limit],append_scale[...,:append_limit],
+                    append_rot[...,:append_limit],append_sh_0[...,:append_limit],
+                    append_sh_rest[...,:append_limit],append_opacity[...,:append_limit])
+
+            dict_clone = {"xyz": append_xyz,
+                          "scale": append_scale,
+                          "rot" : append_rot,
+                          "sh_0": append_sh_0,
+                          "sh_rest": append_sh_rest,
+                          "opacity" : append_opacity}
+            
+            self._cat_tensors_to_optimizer(dict_clone,optimizer)
+        return
+    
+```
