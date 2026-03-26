@@ -152,6 +152,7 @@ class BaseWrapper:
 
     @classmethod
     def call_script(cls, *args, **kwargs):
+        # 使用 Python script 实现
         return cls._script(*args, **kwargs)
     
     @classmethod
@@ -652,46 +653,105 @@ class CreateViewProjFunc(torch.autograd.Function):
 class Binning(BaseWrapper):
     @torch.no_grad()
     def __binning_script(
-        ndc:torch.Tensor,eigen_val:torch.Tensor,eigen_vec:torch.Tensor,opacity:torch.Tensor,
+        ndc:torch.Tensor, eigen_val:torch.Tensor, eigen_vec:torch.Tensor, opacity:torch.Tensor,
         valid_length:torch.Tensor|None,feedback_binning_allocate_size:torch.Tensor|None,idx_tensor:torch.Tensor|None,
         img_pixel_shape:tuple[int,int],tile_size:tuple[int,int]
     ):
-        def craete_2d_AABB(ndc:torch.Tensor,eigen_val:torch.Tensor,eigen_vec:torch.Tensor,opacity:torch.Tensor,tile_size:int,img_pixel_shape:tuple[int,int],img_tile_shape:tuple[int,int]):
+        def craete_2d_AABB(ndc:torch.Tensor,eigen_val:torch.Tensor,eigen_vec:torch.Tensor,opacity:torch.Tensor,tile_size:tuple[int,int],img_pixel_shape:tuple[int,int],img_tile_shape:tuple[int,int]):
+            # ndc shape: [batch, 4, num_points]
+            # eigen_val shape: [batch, num_points]
+            # eigen_vec shape: [batch, 2, 2, num_points]
+            # opacity shape: [batch, num_points]
+            
             # Major and minor axes -> AABB extensions
-            opacity_clamped=opacity.unsqueeze(0).clamp_min(1/255)
+            # opacity shape: [batch, num_points]
+            opacity_clamped=opacity.clamp_min(1/255)
             coefficient=2*((255*opacity_clamped).log())#-2*(1/(255*opacity.squeeze(-1))).log()
-            axis_length=(coefficient*eigen_val.abs()).sqrt()
-            extension=(axis_length.unsqueeze(-2)*eigen_vec).abs().sum(dim=-3)
+            
+            # 调试输出
+            print(f"[DEBUG] ndc.shape: {ndc.shape}")
+            print(f"[DEBUG] eigen_val.shape: {eigen_val.shape}")
+            print(f"[DEBUG] eigen_vec.shape: {eigen_vec.shape}")
+            print(f"[DEBUG] opacity.shape: {opacity.shape}")
+            print(f"[DEBUG] coefficient.shape: {coefficient.shape}")
+            
+            # eigen_val: [batch, 2, num_points] -> [batch, num_points, 2]
+            # coefficient: [batch, num_points]
+            # axis_length 应该是 [batch, num_points, 2]
+            eigen_val_perm = eigen_val.permute(0, 2, 1)  # [batch, num_points, 2]
+            axis_length=(coefficient.unsqueeze(-1)*eigen_val_perm).sqrt()
+            # eigen_vec: [batch, 2, 2, num_points] -> [batch, num_points, 2, 2]
+            eigen_vec_perm = eigen_vec.permute(0, 3, 1, 2)
+            # extension: [batch, num_points, 2]
+            # axis_length: [batch, num_points, 2], eigen_vec_perm: [batch, num_points, 2, 2]
+            # 需要在最后一个维度上广播：axis_length.unsqueeze(-1) * eigen_vec_perm
+            # 调试输出
+            print(f"[DEBUG] coefficient.shape: {coefficient.shape}, eigen_val.shape: {eigen_val.shape}")
+            print(f"[DEBUG] axis_length.shape: {axis_length.shape}, eigen_vec_perm.shape: {eigen_vec_perm.shape}")
+            # axis_length 应该是 [batch, num_points, 1] 以便与 eigen_vec_perm [batch, num_points, 2, 2] 广播
+            axis_length_expanded = axis_length.unsqueeze(-1) if axis_length.dim() == 3 else axis_length
+            extension=(axis_length_expanded*eigen_vec_perm).abs().sum(dim=-2)
+            print(f"[DEBUG] extension.shape: {extension.shape}")
 
-            screen_uv=(ndc[:,:2]+1.0)*0.5
-            screen_uv[:,0]*=img_pixel_shape[1]#x
-            screen_uv[:,1]*=img_pixel_shape[0]#y
+            # screen_uv: [batch, 2, num_points] -> [batch, num_points, 2]
+            screen_uv=(ndc[:,:2,:]+1.0)*0.5
+            screen_uv=screen_uv.permute(0, 2, 1)  # [batch, num_points, 2]
+            screen_uv[:,:,0]*=img_pixel_shape[1]#x
+            screen_uv[:,:,1]*=img_pixel_shape[0]#y
             screen_coord=screen_uv-0.5
-            b_visible=~((ndc[:,0]<-1.3)|(ndc[:,0]>1.3)|(ndc[:,1]<-1.3)|(ndc[:,1]>1.3)|(ndc[:,2]>1)|(ndc[:,2]<0))
-            left_up=((screen_coord-extension)/tile_size).int()*b_visible
-            right_down=((screen_coord+extension)/tile_size).ceil().int()*b_visible
-            left_up[:,0].clamp_(0,img_tile_shape[1])#x
-            left_up[:,1].clamp_(0,img_tile_shape[0])#y
-            right_down[:,0].clamp_(0,img_tile_shape[1])
-            right_down[:,1].clamp_(0,img_tile_shape[0])
+            
+            # b_visible: [batch, num_points]
+            b_visible=~((ndc[:,0,:]<-1.3)|(ndc[:,0,:]>1.3)|(ndc[:,1,:]<-1.3)|(ndc[:,1,:]>1.3)|(ndc[:,2,:]>1)|(ndc[:,2,:]<0))
+            
+            # 分别处理 x 和 y 方向 - extension 是 [batch, num_points, 2]
+            # extension[:,:,0] 是 x 方向，extension[:,:,1] 是 y 方向
+            left_up_x=((screen_coord[:,:,0]-extension[:,:,0])/float(tile_size[0])).int()
+            left_up_y=((screen_coord[:,:,1]-extension[:,:,1])/float(tile_size[1])).int()
+            right_down_x=((screen_coord[:,:,0]+extension[:,:,0])/float(tile_size[0])).ceil().int()
+            right_down_y=((screen_coord[:,:,1]+extension[:,:,1])/float(tile_size[1])).ceil().int()
+            
+            left_up=torch.stack([left_up_x, left_up_y], dim=2)
+            right_down=torch.stack([right_down_x, right_down_y], dim=2)
+            
+            # b_visible 是 [batch, num_points]，需要扩展到 [batch, num_points, 2]
+            # 使用 unsqueeze 和 expand 来正确广播
+            left_up = left_up * b_visible.unsqueeze(-1)
+            right_down = right_down * b_visible.unsqueeze(-1)
+            
+            left_up[:,:,0].clamp_(0,img_tile_shape[1])#x
+            left_up[:,:,1].clamp_(0,img_tile_shape[0])#y
+            right_down[:,:,0].clamp_(0,img_tile_shape[1])
+            right_down[:,:,1].clamp_(0,img_tile_shape[0])
 
             return left_up,right_down
         
         nvtx.range_push("binning_allocate")
-        img_tile_shape=(int(math.ceil(img_pixel_shape[0]/float(tile_size))),int(math.ceil(img_pixel_shape[1]/float(tile_size))))
+        img_tile_shape=(int(math.ceil(img_pixel_shape[0]/float(tile_size[0]))),int(math.ceil(img_pixel_shape[1]/float(tile_size[1]))))
         tiles_num=img_tile_shape[0]*img_tile_shape[1]
 
         left_up,right_down=craete_2d_AABB(ndc,eigen_val,eigen_vec,opacity,tile_size,img_pixel_shape,img_tile_shape)
 
         #splatting area of each points
         rect_length=right_down-left_up
-        tiles_touched=rect_length[:,0]*rect_length[:,1]
+        tiles_touched=rect_length[:,:,0]*rect_length[:,:,1]
         b_visible=(tiles_touched!=0)
 
         #sort by depth
-        values,point_ids=ndc[:,2].sort(dim=-1,descending=True)
-        for i in range(ndc.shape[0]):
-            tiles_touched[i]=tiles_touched[i,point_ids[i]]
+        # ndc[:,2]: [batch, num_points] - 深度值
+        depth = ndc[:,2]
+        # 检查深度值是否有效（去除 NaN 和 Inf）
+        depth_valid = torch.isfinite(depth)
+        # 将无效的深度值替换为一个很大的值，使其排在最后
+        depth = torch.where(depth_valid, depth, torch.full_like(depth, float('inf')))
+        
+        values,point_ids=depth.sort(dim=-1,descending=True)
+        
+        # tiles_touched: [batch, num_points], point_ids: [batch, num_points]
+        # 使用 gather 来重新排列 tiles_touched
+        # 确保 point_ids 在合法范围内
+        point_ids = point_ids.clamp(0, tiles_touched.shape[1]-1)
+        
+        tiles_touched = tiles_touched.gather(dim=1, index=point_ids)
 
         #calc the item num of table and the start index in table of each point
         prefix_sum=tiles_touched.cumsum(1,dtype=torch.int32)#start index of points
@@ -700,8 +760,13 @@ class Binning(BaseWrapper):
         nvtx.range_pop()
         
         # allocate table and fill it (Table: tile_id-uint16,point_id-uint16)
-        large_points_index=(tiles_touched>=32).nonzero()
-        my_table=litegs_fused.createTable(left_up,right_down,prefix_sum,point_ids,large_points_index,int(allocate_size),img_tile_shape[1])
+        # script 版本使用简化的 API，使用原始参数
+        # point_ids 需要是 1D 的
+        my_table=litegs_fused.create_table(
+            left_up, right_down, prefix_sum, point_ids.flatten(),
+            None, None, None,  # large_points_index 不需要
+            img_pixel_shape[0], img_pixel_shape[1], tile_size[0], tile_size[1]
+        )
         sorted_tileId:torch.Tensor=my_table[0]
         sorted_pointId:torch.Tensor=my_table[1]
 
@@ -716,13 +781,20 @@ class Binning(BaseWrapper):
     
     @torch.no_grad()
     def __binning_fused(
-        ndc:torch.Tensor,view_depth:torch.Tensor,inv_cov2d:torch.Tensor,opacity:torch.Tensor,
+        ndc:torch.Tensor,eigen_val:torch.Tensor,eigen_vec:torch.Tensor,opacity:torch.Tensor,
         valid_length:torch.Tensor|None,feedback_binning_allocate_size:torch.Tensor|None,idx_tensor:torch.Tensor|None,
         img_pixel_shape:tuple[int,int],tile_size:tuple[int,int]
     ):
         
         img_tile_shape=(int(math.ceil(img_pixel_shape[0]/float(tile_size[0]))),int(math.ceil(img_pixel_shape[1]/float(tile_size[1]))))
         tiles_num=img_tile_shape[0]*img_tile_shape[1]
+
+        # 从 eigen_val 和 eigen_vec 计算 inv_cov2d 和 view_depth
+        # eigen_val: [batch, 2, num_points], eigen_vec: [batch, 2, 2, num_points]
+        # inv_cov2d: [batch, 2, 2, num_points]
+        inv_cov2d = eigen_vec * eigen_val.unsqueeze(1)  # 广播相乘
+        # view_depth: [batch, num_points] - 从 ndc 提取
+        view_depth = ndc[:, 2, :]
 
         pixel_left_up,pixel_right_down,allocate_size=litegs_fused.get_allocate_size(
             ndc,view_depth,inv_cov2d,opacity,

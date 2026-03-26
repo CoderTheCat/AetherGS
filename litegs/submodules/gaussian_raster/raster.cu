@@ -8,6 +8,36 @@
 #include <cuda/atomic>
 #include <math.h>
 #include <cuda_fp16.h>
+
+// CUDA 版本兼容：CUDA 11 不支持 __hgt2_mask 等内置函数
+#if __CUDA_VERSION__ < 12000
+// CUDA 11 中，使用 float2 比较后转换为 mask
+__device__ __forceinline__ unsigned int hgt2_mask(half2 a, half2 b) {
+    float2 a_f = __half22float2(a);
+    float2 b_f = __half22float2(b);
+    unsigned int mask_x = (a_f.x > b_f.x) ? 0xFFFF : 0;
+    unsigned int mask_y = (a_f.y > b_f.y) ? 0xFFFF : 0;
+    return (mask_y << 16) | mask_x;
+}
+__device__ __forceinline__ unsigned int hge2_mask(half2 a, half2 b) {
+    float2 a_f = __half22float2(a);
+    float2 b_f = __half22float2(b);
+    unsigned int mask_x = (a_f.x >= b_f.x) ? 0xFFFF : 0;
+    unsigned int mask_y = (a_f.y >= b_f.y) ? 0xFFFF : 0;
+    return (mask_y << 16) | mask_x;
+}
+__device__ __forceinline__ unsigned int hle2_mask(half2 a, half2 b) {
+    float2 a_f = __half22float2(a);
+    float2 b_f = __half22float2(b);
+    unsigned int mask_x = (a_f.x <= b_f.x) ? 0xFFFF : 0;
+    unsigned int mask_y = (a_f.y <= b_f.y) ? 0xFFFF : 0;
+    return (mask_y << 16) | mask_x;
+}
+#define __hgt2_mask(a, b) hgt2_mask(a, b)
+#define __hge2_mask(a, b) hge2_mask(a, b)
+#define __hle2_mask(a, b) hle2_mask(a, b)
+#endif
+
 namespace cg = cooperative_groups;
 
 #include <ATen/core/TensorAccessor.h>

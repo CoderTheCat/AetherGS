@@ -41,7 +41,7 @@ def render_preprocess(cluster_origin:torch.Tensor|None,cluster_extend:torch.Tens
             camera_center=(-view_matrix[...,3:4,:3]@(view_matrix[...,:3,:3].transpose(-1,-2))).squeeze(1)
             dirs=culled_xyz[:3]-camera_center.unsqueeze(-1)
             dirs=torch.nn.functional.normalize(dirs,dim=-2)
-        color=utils.wrapper.SphericalHarmonicToRGB.call_fused(actived_sh_degree,sh_0,sh_rest,dirs)
+        color=utils.wrapper.SphericalHarmonicToRGB.call_script(actived_sh_degree,sh_0,sh_rest,dirs)
         nvtx.range_pop()
 
 
@@ -55,16 +55,20 @@ def render(view_matrix:torch.Tensor,proj_matrix:torch.Tensor,
     #gs projection
     nvtx.range_push("Proj")
     view_pos,ndc_pos=utils.wrapper.MVPTransform.apply(xyz,view_matrix,proj_matrix,valid_length)
+    view_pos = view_pos.clone()
+    ndc_pos = ndc_pos.clone()
     transform_matrix=utils.wrapper.CreateTransformMatrix.call_fused(scale,rot,valid_length)
     J=utils.wrapper.CreateRaySpaceTransformMatrix.call_fused(view_pos,proj_matrix,output_shape,valid_length)
     cov2d=utils.wrapper.CreateCov2dDirectly.call_fused(J,view_matrix,transform_matrix,valid_length)
+    print(f"[DEBUG cov2d] cov2d.shape: {cov2d.shape}")
     eigen_val,eigen_vec,inv_cov2d=utils.wrapper.EighAndInverse2x2Matrix.call_fused(cov2d,valid_length)
+    print(f"[DEBUG eigen] eigen_val.shape: {eigen_val.shape}, eigen_vec.shape: {eigen_vec.shape}, inv_cov2d.shape: {inv_cov2d.shape}")
     view_depth=view_pos[:,2,:]
     nvtx.range_pop()
     
-    #visibility table
+    #visibility table - 使用 fused API 版本
     tile_start_index,sorted_pointId,primitive_visible=utils.wrapper.Binning.call_fused(
-        ndc_pos,view_depth,inv_cov2d,opacity,
+        ndc_pos, eigen_val, eigen_vec, opacity,
         valid_length,feedback_binning_allocate_size,idx_tensor,
         output_shape,pp.tile_size
     )

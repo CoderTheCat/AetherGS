@@ -13,3 +13,77 @@ debug_gradient*
 profiler_input_data
 nan_data
 dataset/*
+
+# 虚拟环境
+venv/
+env/
+*venv*/
+*env*/
+*.venv/
+*.env/
+litegs-env/
+litegs_venv/
+litegs-wsl-env/
+wsl-litegs-env/
+
+# Python 缓存
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# 编译文件
+*.pyd
+*.so
+*.dll
+*.exp
+*.obj
+*.ilk
+*.pdb
+*.lib
+*.a
+
+# 数据文件
+data/
+*.ply
+*.splat
+*.ckpt
+*.pth
+*.bin
+*.npy
+*.pt
+
+# 日志和临时文件
+*.log
+tmp/
+temp/
+.cache/
+
+# IDE 文件
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# 分析结果
+analysis_results/
+evaluation_results/
+theory_engineering_analysis/
+
+# 脚本文件
+*.sh
+*.bat
+
+# 测试文件
+test_*.py
+*_test.py
+pytest.ini
+
+# 文档（保留核心文档）
+# *.md 保留，但排除临时分析文件

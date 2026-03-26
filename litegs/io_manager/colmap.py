@@ -187,7 +187,11 @@ def load_frames(path:str,image_dir:str)->tuple[dict[int,PinHoleCameraInfo],list[
 
     for ImgArg in cam_extrinsics.values():
         if ImgArg.camera_id in CameraInfoDict.keys():
-            camera_frame=ImageFrame(ImgArg.id,ImgArg.viewtransform_rotation,ImgArg.tvec,ImgArg.camera_id,ImgArg.name,os.path.join(path,image_dir,ImgArg.name),ImgArg.xys)
+            if os.path.isabs(image_dir):
+                img_path = os.path.join(image_dir, ImgArg.name)
+            else:
+                img_path = os.path.join(path, image_dir, ImgArg.name)
+            camera_frame=ImageFrame(ImgArg.id,ImgArg.viewtransform_rotation,ImgArg.tvec,ImgArg.camera_id,ImgArg.name,img_path,ImgArg.xys)
             ImageFrameList.append(camera_frame)
     ImageFrameListSorted = sorted(ImageFrameList.copy(), key = lambda x : x.name)
 

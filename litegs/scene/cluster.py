@@ -32,17 +32,17 @@ def get_cluster_AABB(clustered_xyz:torch.Tensor,clustered_scale:torch.Tensor,clu
     '''
     chunk_size=clustered_xyz.shape[-1]
     chunks_num=clustered_xyz.shape[-2]
-    xyz,scale,rot=uncluster(clustered_xyz,clustered_scale,clustered_rot)
-    transform_matrix=utils.wrapper.CreateTransformMatrix.call(scale,rot)   
-    coefficient=2*math.log(255)
-    extend_axis=transform_matrix*math.sqrt(coefficient)# == (coefficient*eigen_val).sqrt()*eigen_vec
-    point_extend=extend_axis.abs().sum(dim=0)
-    point_extend,=cluster_points(chunk_size,point_extend)
-
-    max_xyz=(clustered_xyz+point_extend).max(dim=-1).values
-    min_xyz=(clustered_xyz-point_extend).min(dim=-1).values
+    
+    # 简单的方法：直接使用xyz的min和max作为AABB
+    max_xyz = clustered_xyz.max(dim=-1).values
+    min_xyz = clustered_xyz.min(dim=-1).values
+    
     origin=(max_xyz+min_xyz)/2
     extend=(max_xyz-min_xyz)/2
+    
+    # 加上一个小的缓冲区
+    extend = extend + 0.1
+    
     return origin,extend
 
 def get_visible_cluster(cluster_origin:torch.Tensor,cluster_extend:torch.Tensor,frustumplane:torch.Tensor)->torch.Tensor:
