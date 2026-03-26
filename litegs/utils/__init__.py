@@ -135,6 +135,45 @@ def frustum_culling_aabb(frustumplane,aabb_origin,aabb_ext)->torch.Tensor:
     visibility=(culling==0)
     return visibility
 
+def frustum_culling_aabb_enhanced(frustumplane,aabb_origin,aabb_ext,margin=0.1,adaptive=True)->torch.Tensor:
+    '''
+    增强版视锥剔除 - 添加 margin 和自适应剔除策略
+    
+    Parameters:
+        frustumplane - the planes of view frustum. [N,6,4]
+        aabb_origin - the origin of Axis-Aligned Bounding Boxes. [3,M]
+        aabb_ext - the extension of Axis-Aligned Bounding Boxes. [3,M]
+        margin - 额外的安全边界，防止边界闪烁
+        adaptive - 是否启用自适应剔除（根据距离调整精度）
+    Returns:
+        visibility - is visible. [N,M]
+    '''
+    assert(aabb_origin.shape[0]==aabb_ext.shape[0])
+    N=frustumplane.shape[0]
+    M=aabb_origin.shape[0]
+    
+    #project origin to plane normal [M,N,6,1]
+    dist_origin=(frustumplane[...,0:3,None]*aabb_origin).sum(-2).permute(2,0,1)+frustumplane[...,3]
+    #project extension to plane normal
+    dist_ext=(frustumplane[...,0:3,None]*aabb_ext).abs().sum(-2).permute(2,0,1)
+    
+    if adaptive:
+        #自适应策略：根据距离调整剔除阈值
+        #远处的物体使用更宽松的剔除，近处使用更严格的剔除
+        dist_to_camera = torch.norm(aabb_origin, dim=0, keepdim=True).unsqueeze(1) # [1,N,M]
+        adaptive_margin = margin * (1.0 + dist_to_camera * 0.1) # 距离越远，margin 越大
+        dist_ext = dist_ext + adaptive_margin
+    else:
+        #固定 margin
+        dist_ext = dist_ext + margin
+    
+    #push out the origin
+    pushed_origin_dist=dist_origin+dist_ext #M,N,6
+    #is completely outside
+    culling=(pushed_origin_dist<0).sum(dim=-1).transpose(0,1)
+    visibility=(culling==0)
+    return visibility
+
 
 
 def img2tiles_torch(img:torch.Tensor,tile_size)->torch.Tensor:
