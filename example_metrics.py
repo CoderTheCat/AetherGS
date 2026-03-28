@@ -7,9 +7,9 @@ import os
 import matplotlib.pyplot as plt
 import json
 
-import litegs
-import litegs.config
-import litegs.utils
+import zephgs
+import zephgs.config
+import zephgs.utils
 import shutil
 
 

@@ -2,8 +2,8 @@ from argparse import ArgumentParser, Namespace
 import torch
 import sys
 
-import litegs
-import litegs.config
+import zephgs
+import zephgs.config
 if __name__ == "__main__":
     parser = ArgumentParser(description="Training script parameters")
     lp_cdo,op_cdo,pp_cdo,dp_cdo=litegs.config.get_default_arg()
