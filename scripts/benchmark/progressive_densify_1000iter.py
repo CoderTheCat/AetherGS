@@ -20,13 +20,13 @@ from datetime import datetime
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from litegs.training.trainer import start
-from litegs.arguments import get_default_arg
+import litegs.config
 
 def run_test(iterations=1000, output_path=None, use_progressive=True):
     """运行渐进式密度控制测试"""
     
     #获取默认参数
-    lp, op, pp, dp = get_default_arg()
+    lp, op, pp, dp = litegs.config.get_default_arg()
     
     #设置渐进式密度控制参数
     if use_progressive:
@@ -72,11 +72,17 @@ def run_test(iterations=1000, output_path=None, use_progressive=True):
     
     #运行训练
     print("\n开始训练...")
-    start(lp, op, pp, dp, 
-          test_epochs=[],
-          save_ply=[iterations-1],
-          save_checkpoint=[],
-          start_checkpoint=None)
+    try:
+        start(lp, op, pp, dp, 
+              test_epochs=[],
+              save_ply=[iterations-1],
+              save_checkpoint=[],
+              start_checkpoint=None)
+    except Exception as e:
+        print(f"训练出错：{e}")
+        import traceback
+        traceback.print_exc()
+        raise
     
     #记录结束时间
     end_time = time.time()

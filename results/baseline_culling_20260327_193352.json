@@ -1,0 +1,14 @@
+{
+  "test_type": "enhanced_frustum_culling_1000iter",
+  "scene": "garden",
+  "iterations": 1000,
+  "use_enhanced": false,
+  "training_time_seconds": 18691.766743659973,
+  "avg_iter_time_ms": 18691.766743659973,
+  "timestamp": "2026-03-28T01:29:42.315409",
+  "config": {
+    "enhanced_frustum_culling": null,
+    "culling_margin": null,
+    "adaptive_culling": null
+  }
+}

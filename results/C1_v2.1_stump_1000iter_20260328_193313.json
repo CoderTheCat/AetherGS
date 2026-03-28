@@ -1,0 +1,16 @@
+{
+  "test_type": "C1_v2.1_MultiScene_Stump",
+  "version": "2.1",
+  "config": {
+    "scene": "Stump",
+    "iterations": 1000,
+    "test_epochs": [
+      5
+    ]
+  },
+  "performance": {
+    "total_time_seconds": 139.45922136306763,
+    "avg_time_per_iteration": 0.13945922136306763
+  },
+  "timestamp": "2026-03-28T19:33:13.388792"
+}

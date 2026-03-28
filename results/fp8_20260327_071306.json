@@ -1,0 +1,14 @@
+{
+  "test_type": "fp8_mixed_precision_1000iter",
+  "scene": "garden",
+  "iterations": 1000,
+  "use_fp8": true,
+  "training_time_seconds": 182.55373907089233,
+  "avg_iter_time_ms": 182.55373907089233,
+  "timestamp": "2026-03-27T07:29:21.077386",
+  "config": {
+    "use_fp8": true,
+    "fp8_start_epoch": 0,
+    "fp8_loss_scale": 1024.0
+  }
+}

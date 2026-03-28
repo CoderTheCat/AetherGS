@@ -72,7 +72,7 @@ def start(lp:arguments.ModelParams,op:arguments.OptimizationParams,pp:arguments.
         sh_0=torch.nn.Parameter(sh_0)
         sh_rest=torch.nn.Parameter(sh_rest)
         opacity=torch.nn.Parameter(opacity)
-        opt,schedular=optimizer.get_optimizer(xyz,scale,rot,sh_0,sh_rest,opacity,norm_radius,op,pp)
+        opt,schedular,_=optimizer.get_optimizer(xyz,scale,rot,sh_0,sh_rest,opacity,norm_radius,op,pp)
         start_epoch=0
     else:
         xyz,scale,rot,sh_0,sh_rest,opacity,start_epoch,opt,schedular=io_manager.load_checkpoint(start_checkpoint)
@@ -192,11 +192,14 @@ def start(lp:arguments.ModelParams,op:arguments.OptimizationParams,pp:arguments.
                             view_matrix,proj_matrix,viewproj_matrix,frustumplane=utils.wrapper.CreateViewProj.apply(extr,intr,gt_image.shape[2],gt_image.shape[3],0.01,5000)
 
                         #cluster culling
-                        visible_chunkid,culled_xyz,culled_scale,culled_rot,culled_color,culled_opacity=render.render_preprocess(cluster_origin,cluster_extend,frustumplane,view_matrix,xyz,scale,rot,sh_0,sh_rest,opacity,op,pp,actived_sh_degree)
-                        img,transmitance,depth,normal,primitive_visible=render.render(view_matrix,proj_matrix,culled_xyz,culled_scale,culled_rot,culled_color,culled_opacity,
-                                                                    actived_sh_degree,gt_image.shape[2:],pp)
+                        visible_chunkid,visible_chunks_num,culled_xyz,culled_scale,culled_rot,color,culled_opacity=render.render_preprocess(cluster_origin,cluster_extend,frustumplane,view_matrix,xyz,scale,rot,sh_0,sh_rest,opacity,
+                                                                    None,None,pp,actived_sh_degree)
+                        img,transmitance,depth,normal,primitive_visible=render.render(view_matrix,proj_matrix,culled_xyz,culled_scale,culled_rot,color,culled_opacity,
+                                                                    None,None,None,actived_sh_degree,gt_image.shape[2:],pp)
                         psnr_list.append(psnr_metrics(img,gt_image).unsqueeze(0))
-                    tqdm.write("\n[EPOCH {}] {} Evaluating: PSNR {}".format(epoch,name,torch.concat(psnr_list,dim=0).mean()))
+                    mean_psnr = torch.concat(psnr_list,dim=0).mean()
+                    tqdm.write("\n[EPOCH {}] {} Evaluating: PSNR {}".format(epoch,name,mean_psnr))
+                    print("\n[PSNR] Epoch {} {} PSNR: {:.4f}\n".format(epoch, name, mean_psnr))
 
         xyz,scale,rot,sh_0,sh_rest,opacity=density_controller.step(opt,epoch)
         progress_bar.update()  

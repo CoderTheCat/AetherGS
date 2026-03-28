@@ -6,7 +6,7 @@ set -e
 
 # 激活虚拟环境
 echo "激活虚拟环境..."
-source /mnt/e/Code/LiteGS/litegs-wsl-env/bin/activate
+. /mnt/e/Code/LiteGS/litegs-wsl-env/bin/activate
 echo "Python 路径：$(which python)"
 echo "Python 版本：$(python --version)"
 echo ""
@@ -21,42 +21,56 @@ echo "============================================================"
 echo ""
 
 # 创建结果目录
-RESULTS_DIR="results"
-mkdir -p $RESULTS_DIR
+mkdir -p results
+mkdir -p results/analysis
 
 # 时间戳
 TIMESTAMP=$(date '+%Y%m%d_%H%M%S')
 
 # 测试列表
 declare -a TESTS=(
-    "渐进式密度控制-Baseline:scripts/benchmark/progressive_densify_1000iter.py:--baseline --output $RESULTS_DIR/baseline_progressive_${TIMESTAMP}.json"
-    "渐进式密度控制 - 实验组:scripts/benchmark/progressive_densify_1000iter.py:--output $RESULTS_DIR/progressive_${TIMESTAMP}.json"
-    "FP8 混合精度-Baseline:scripts/benchmark/fp8_mixed_precision_1000iter.py:--baseline --output $RESULTS_DIR/baseline_fp8_${TIMESTAMP}.json"
-    "FP8 混合精度 - 实验组:scripts/benchmark/fp8_mixed_precision_1000iter.py:--output $RESULTS_DIR/fp8_${TIMESTAMP}.json"
-    "视锥剔除增强-Baseline:scripts/benchmark/frustum_culling_enhanced_1000iter.py:--baseline --output $RESULTS_DIR/baseline_culling_${TIMESTAMP}.json"
-    "视锥剔除增强 - 实验组:scripts/benchmark/frustum_culling_enhanced_1000iter.py:--output $RESULTS_DIR/enhanced_culling_${TIMESTAMP}.json"
+    "渐进式密度控制-Baseline:scripts/benchmark/progressive_densify_1000iter.py:--baseline --output results/baseline_progressive_${TIMESTAMP}.json"
+    "渐进式密度控制 - 实验组:scripts/benchmark/progressive_densify_1000iter.py:--output results/progressive_${TIMESTAMP}.json"
+    "FP8 混合精度-Baseline:scripts/benchmark/fp8_mixed_precision_1000iter.py:--baseline --output results/baseline_fp8_${TIMESTAMP}.json"
+    "FP8 混合精度 - 实验组:scripts/benchmark/fp8_mixed_precision_1000iter.py:--output results/fp8_${TIMESTAMP}.json"
+    "视锥剔除增强-Baseline:scripts/benchmark/frustum_culling_enhanced_1000iter.py:--baseline --output results/baseline_culling_${TIMESTAMP}.json"
+    "视锥剔除增强 - 实验组:scripts/benchmark/frustum_culling_enhanced_1000iter.py:--output results/enhanced_culling_${TIMESTAMP}.json"
 )
 
 # 结果数组
 declare -a RESULTS=()
+FAILED=0
 
 # 运行测试
 for test_info in "${TESTS[@]}"; do
+    # 检查是否有之前的测试失败
+    if [ $FAILED -eq 1 ]; then
+        echo ""
+        echo "⚠️  由于之前测试失败，跳过后续测试"
+        IFS=':' read -r name script args <<< "$test_info"
+        RESULTS+=("⏭️  已跳过：$name")
+        continue
+    fi
+    
     IFS=':' read -r name script args <<< "$test_info"
     
     echo ""
     echo "============================================================"
     echo "运行：$name"
     echo "============================================================"
-    echo "命令：python3 $script $args"
+    echo "命令：python $script $args"
     echo ""
     
-    if python3 $script $args; then
+    if python $script $args; then
         echo "✅ 测试完成：$name"
         RESULTS+=("✅ $name")
     else
         echo "❌ 测试失败：$name"
         RESULTS+=("❌ $name")
+        FAILED=1
+        echo ""
+        echo "⚠️  测试失败，将暂停后续测试执行"
+        echo "⚠️  请修复问题后重新运行脚本"
     fi
 done
 

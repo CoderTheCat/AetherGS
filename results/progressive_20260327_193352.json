@@ -1,0 +1,16 @@
+{
+  "test_type": "progressive_densify_1000iter",
+  "scene": "garden",
+  "iterations": 1000,
+  "use_progressive": true,
+  "training_time_seconds": 164.06585359573364,
+  "avg_iter_time_ms": 164.06585359573364,
+  "timestamp": "2026-03-27T19:41:10.375921",
+  "config": {
+    "progressive_mode": "sigmoid",
+    "progressive_start_epoch": 100,
+    "progressive_end_epoch": 800,
+    "progressive_base_percent": 0.005,
+    "progressive_peak_percent": 0.02
+  }
+}

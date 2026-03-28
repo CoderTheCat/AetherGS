@@ -20,13 +20,13 @@ from datetime import datetime
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from litegs.training.trainer import start
-from litegs.arguments import get_default_arg
+import litegs.config
 
 def run_test(iterations=1000, output_path=None, use_enhanced=True):
     """运行视锥剔除增强测试"""
     
     #获取默认参数
-    lp, op, pp, dp = get_default_arg()
+    lp, op, pp, dp = litegs.config.get_default_arg()
     
     #设置视锥剔除增强参数
     if use_enhanced:

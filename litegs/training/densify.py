@@ -363,6 +363,84 @@ class DensityControllerTamingGS(DensityControllerOfficial):
         return
 
 
+def compute_importance_scores(xyz, scale, rot, sh_0, sh_rest, opacity, 
+                             grad_xyz=None, grad_opacity=None, grad_scale=None,
+                             grad_threshold=0.0002):
+    """
+    计算高斯点的重要性分数，用于指导分裂/克隆策略
+    
+    理论依据:
+    1. 梯度方差反映学习活跃度 (类似于自然梯度的 Fisher 信息矩阵对角线近似)
+    2. 重要性采样理论 (Importance Sampling) 加速收敛
+    3. 结合梯度幅值和方差，避免梯度爆炸区域
+    
+    参数:
+        xyz, scale, rot, sh_0, sh_rest, opacity: 高斯参数
+        grad_xyz, grad_opacity, grad_scale: 梯度张量 (可选)
+        grad_threshold: 最小梯度阈值 (理论建议 2)
+    
+    返回:
+        importance_score: [N] 重要性分数，归一化到 [0, 1]
+    """
+    N = xyz.shape[-1]
+    device = xyz.device
+    
+    # 如果没有提供梯度，使用不透明度作为默认分数
+    if grad_xyz is None or grad_opacity is None or grad_scale is None:
+        opacity_score = opacity.sigmoid().mean(dim=0)
+        return opacity_score
+    
+    # 确保梯度形状正确
+    if grad_xyz.dim() == 3:
+        grad_xyz = grad_xyz.view(-1, N)
+    if grad_opacity.dim() == 3:
+        grad_opacity = grad_opacity.view(-1, N)
+    if grad_scale.dim() == 3:
+        grad_scale = grad_scale.view(-1, N)
+    
+    # === 理论建议 1: 结合梯度幅值和方差 (避免梯度爆炸区域) ===
+    # 梯度幅值 (反映学习强度)
+    grad_mag_xyz = torch.abs(grad_xyz).mean(dim=0)
+    grad_mag_opacity = torch.abs(grad_opacity).mean(dim=0)
+    grad_mag_scale = torch.abs(grad_scale).mean(dim=0)
+    grad_mag_score = grad_mag_xyz + grad_mag_opacity + grad_mag_scale
+    
+    # 梯度方差 (反映学习稳定性/曲率信息)
+    grad_var_xyz = torch.var(grad_xyz, dim=0)
+    grad_var_opacity = torch.var(grad_opacity, dim=0)
+    grad_var_scale = torch.var(grad_scale, dim=0)
+    grad_var_score = grad_var_xyz + grad_var_opacity + grad_var_scale
+    
+    # 结合幅值和方差：var / (1 + |grad|^2) 避免梯度爆炸区域
+    grad_score = grad_var_score / (1.0 + grad_mag_score ** 2 + 1e-8)
+    
+    # === 理论建议 2: 引入最小阈值 ===
+    # 确保只有梯度足够大的点才考虑分裂
+    grad_magnitude = grad_mag_score
+    threshold_mask = grad_magnitude < grad_threshold
+    grad_score = grad_score * (~threshold_mask).float()
+    
+    # === 不透明度权重 (重要但常被忽略) ===
+    # 不透明度过低的点即使梯度大也不重要 (可能是噪声)
+    opacity_score = opacity.sigmoid().mean(dim=0)
+    
+    # === 综合分数 (70% 梯度 + 30% 不透明度) ===
+    importance_score = 0.7 * grad_score + 0.3 * opacity_score
+    
+    # === 归一化到 [0, 1] ===
+    min_score = importance_score.min()
+    max_score = importance_score.max()
+    if max_score > min_score:
+        importance_score = (importance_score - min_score) / (max_score - min_score + 1e-8)
+    else:
+        importance_score = torch.ones_like(importance_score) * 0.5
+    
+    # === NaN 保护 ===
+    importance_score = torch.nan_to_num(importance_score, nan=0.5, posinf=1.0, neginf=0.0)
+    
+    return importance_score
+
+
 class DensityControllerProgressive(DensityControllerOfficial):
     @torch.no_grad()
     def __init__(self,screen_extent:float,densify_params:DensifyParams,bCluster:bool,init_points_num:int)->None:
@@ -410,22 +488,115 @@ class DensityControllerProgressive(DensityControllerOfficial):
         selected_clone_count = int(clone_count * scale_factor)
         selected_split_count = int(split_count * scale_factor)
         
+        # === C1 重要性引导分裂 (理论建议 3: 混合策略) ===
+        # 从 optimizer 中获取梯度信息
+        grad_xyz = None
+        grad_opacity = None
+        grad_scale = None
+        
+        try:
+            for group in optimizer.param_groups:
+                param = group['params'][0]
+                if param.grad is not None:
+                    if group['name'] == 'xyz':
+                        grad_xyz = param.grad.view(-1, xyz.shape[-1])
+                    elif group['name'] == 'opacity':
+                        grad_opacity = param.grad.view(-1, xyz.shape[-1])
+                    elif group['name'] == 'scale':
+                        grad_scale = param.grad.view(-1, xyz.shape[-1])
+        except Exception:
+            # 如果获取梯度失败，回退到随机策略
+            grad_xyz = None
+        
+        # 计算重要性分数 (使用 densify 阈值作为最小阈值)
+        if grad_xyz is not None:
+            importance_scores = compute_importance_scores(
+                xyz, scale, rot, sh_0, sh_rest, opacity,
+                grad_xyz=grad_xyz, grad_opacity=grad_opacity, grad_scale=grad_scale,
+                grad_threshold=self.grad_threshold
+            )
+        else:
+            importance_scores = torch.ones(xyz.shape[-1], device=xyz.device) * 0.5
+        
+        # === 克隆选择：重要性引导 + 随机探索 ===
         if clone_count > 0:
-            clone_scores = torch.ones(clone_count, device=xyz.device)
-            clone_indices = torch.arange(clone_count, device=xyz.device)
-            if selected_clone_count < clone_count:
-                clone_indices = clone_indices[torch.randperm(clone_count)[:selected_clone_count]]
+            clone_mask_indices = clone_mask.nonzero().squeeze()
+            if clone_mask_indices.dim() == 0:
+                clone_mask_indices = clone_mask_indices.unsqueeze(0)
+            
+            # 获取克隆候选点的重要性分数
+            clone_scores = importance_scores[clone_mask_indices]
+            
+            # === 理论建议 3: 混合策略 (70% 重要性 + 30% 随机) ===
+            # 保持探索能力，避免陷入局部最优
+            if selected_clone_count < clone_count and clone_count > 10:
+                # 计算选择数量
+                importance_count = int(selected_clone_count * 0.7)  # 70% 按重要性
+                random_count = selected_clone_count - importance_count  # 30% 随机
+                
+                # 按重要性选择
+                score_sorted_indices = torch.argsort(clone_scores, descending=True)
+                importance_selected = score_sorted_indices[:importance_count]
+                
+                # 随机选择 (排除已选的重要性点)
+                remaining_indices = score_sorted_indices[importance_count:]
+                if len(remaining_indices) > random_count:
+                    random_perm = torch.randperm(len(remaining_indices))[:random_count]
+                    random_selected = remaining_indices[random_perm]
+                else:
+                    random_selected = remaining_indices
+                
+                # 合并选择
+                final_indices = torch.cat([importance_selected, random_selected])
+            else:
+                # 如果数量少，直接全选或随机选择
+                if selected_clone_count >= clone_count:
+                    final_indices = torch.arange(clone_count, device=xyz.device)
+                else:
+                    final_indices = torch.randperm(clone_count)[:selected_clone_count]
+            
+            # 转换为 mask
             selected_clone_mask = torch.zeros_like(clone_mask)
-            selected_clone_mask[clone_mask.nonzero().squeeze()[clone_indices]] = True
+            selected_clone_mask[clone_mask_indices[final_indices]] = True
             clone_mask = selected_clone_mask
         
+        # === 分裂选择：重要性引导 + 随机探索 ===
         if split_count > 0:
-            split_scores = torch.ones(split_count, device=xyz.device)
-            split_indices = torch.arange(split_count, device=xyz.device)
-            if selected_split_count < split_count:
-                split_indices = split_indices[torch.randperm(split_count)[:selected_split_count]]
+            split_mask_indices = split_mask.nonzero().squeeze()
+            if split_mask_indices.dim() == 0:
+                split_mask_indices = split_mask_indices.unsqueeze(0)
+            
+            # 获取分裂候选点的重要性分数
+            split_scores = importance_scores[split_mask_indices]
+            
+            # === 理论建议 3: 混合策略 (70% 重要性 + 30% 随机) ===
+            if selected_split_count < split_count and split_count > 10:
+                importance_count = int(selected_split_count * 0.7)
+                random_count = selected_split_count - importance_count
+                
+                # 按重要性选择
+                score_sorted_indices = torch.argsort(split_scores, descending=True)
+                importance_selected = score_sorted_indices[:importance_count]
+                
+                # 随机选择
+                remaining_indices = score_sorted_indices[importance_count:]
+                if len(remaining_indices) > random_count:
+                    random_perm = torch.randperm(len(remaining_indices))[:random_count]
+                    random_selected = remaining_indices[random_perm]
+                else:
+                    random_selected = remaining_indices
+                
+                # 合并选择
+                final_indices = torch.cat([importance_selected, random_selected])
+            else:
+                if selected_split_count >= split_count:
+                    final_indices = torch.arange(split_count, device=xyz.device)
+                else:
+                    final_indices = torch.randperm(split_count)[:selected_split_count]
+            
+            # 转换为 mask
             selected_split_mask = torch.zeros_like(split_mask)
-            selected_split_mask[split_mask.nonzero().squeeze()[split_indices]] = True
+            selected_split_mask[split_mask_indices[final_indices]] = True
             split_mask = selected_split_mask
 
         if split_mask.sum() > 0:
@@ -479,5 +650,3 @@ class DensityControllerProgressive(DensityControllerOfficial):
             
             self._cat_tensors_to_optimizer(dict_clone,optimizer)
         return
-    
-```

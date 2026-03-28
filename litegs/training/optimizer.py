@@ -94,11 +94,22 @@ def get_optimizer(xyz:torch.nn.Parameter,scale:torch.nn.Parameter,rot:torch.nn.P
               max_epochs=opt_setting.position_lr_max_steps)
     
     #FP8 混合精度训练支持
-    grad_scaler = None
+    # DEPRECATED (2026-03-28): 此功能已被废弃
+    # 原因：1) 当前实现导致性能严重下降 (-1028%)
+    #       2) 仅支持 H100/B100 等数据中心显卡
+    #       3) 与 LiteGS 跨平台原则相悖
+    # 建议：使用 Progressive Densify (+7.1% 加速) 或其他优化方案
+    import warnings
     if opt_setting.use_fp8:
-        grad_scaler = GradScaler(init_scale=opt_setting.fp8_loss_scale)
-        print("✓ 启用 FP8 混合精度训练")
-        print(f"  - Loss Scale: {opt_setting.fp8_loss_scale}")
-        print(f"  - 起始轮次：{opt_setting.fp8_start_epoch}")
+        warnings.warn(
+            "FP8 混合精度训练已被废弃。\n"
+            "原因：性能严重下降 (-1028%)，硬件限制严重。\n"
+            "建议：使用 Progressive Densify (+7.1% 加速) 或其他优化方案。\n"
+            "详见：results/FP8_加速技术综合分析报告_20260328.md",
+            DeprecationWarning,
+            stacklevel=2
+        )
+    
+    grad_scaler = None  # FP8 功能已禁用
     
     return optimizer,scheduler,grad_scaler

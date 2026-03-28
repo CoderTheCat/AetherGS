@@ -1,0 +1,16 @@
+{
+  "test_type": "C1_v2.1_MultiScene_Room",
+  "version": "2.1",
+  "config": {
+    "scene": "Room",
+    "iterations": 1000,
+    "test_epochs": [
+      5
+    ]
+  },
+  "performance": {
+    "total_time_seconds": 143.9779531955719,
+    "avg_time_per_iteration": 0.1439779531955719
+  },
+  "timestamp": "2026-03-28T19:06:08.307085"
+}

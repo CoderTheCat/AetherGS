@@ -96,6 +96,8 @@ class OptimizationParams(ParamGroup):
     learnable_viewproj = False
     
     #FP8 混合精度训练参数
+    # DEPRECATED (2026-03-28): 此功能已被废弃
+    # 原因：当前实现导致性能严重下降 (-1028%)，仅支持 H100/B100
     use_fp8 = False
     fp8_start_epoch = 1000
     fp8_loss_scale = 1024.0

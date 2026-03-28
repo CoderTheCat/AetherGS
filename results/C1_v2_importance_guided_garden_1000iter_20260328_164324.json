@@ -1,0 +1,30 @@
+{
+  "test_type": "C1_v2_importance_guided_densify",
+  "version": "2.1",
+  "config": {
+    "scene": "Garden",
+    "iterations": 1000,
+    "progressive_mode": "sigmoid",
+    "importance_mix_ratio": 0.85,
+    "adaptive_mix_ratio": false,
+    "initial_mix_ratio": 0.85,
+    "final_mix_ratio": 0.85,
+    "mix_ratio_schedule": "linear",
+    "use_hessian_approx": false,
+    "use_quantile_normalize": false,
+    "grad_threshold": 0.0002
+  },
+  "performance": {
+    "total_time_seconds": 179.101567029953,
+    "avg_time_per_iteration": 0.179101567029953
+  },
+  "baseline_comparison": {
+    "official_baseline": 210.34,
+    "progressive_densify": 195.94,
+    "c1_v1": 198.56,
+    "speedup_vs_official": 14.851399149019207,
+    "speedup_vs_progressive": 8.593667944292637,
+    "speedup_vs_c1_v1": 9.79977486404462
+  },
+  "timestamp": "2026-03-28T16:43:24.293408"
+}

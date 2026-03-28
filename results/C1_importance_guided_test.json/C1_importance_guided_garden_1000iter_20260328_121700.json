@@ -1,0 +1,15 @@
+{
+  "test_type": "C1_importance_guided_densify",
+  "config": {
+    "scene": "Garden",
+    "iterations": 1000,
+    "progressive_mode": "sigmoid",
+    "importance_mix_ratio": 0.7,
+    "grad_threshold": 0.0002
+  },
+  "performance": {
+    "total_time_seconds": 198.55903911590576,
+    "avg_time_per_iteration": 0.19855903911590575
+  },
+  "timestamp": "2026-03-28T12:17:00.021888"
+}
