@@ -34,10 +34,10 @@ This repository provides a refactored codebase aimed at improving the flexibilit
 
 ### Importance Guided Densification (C1 v2.1)
 
-| Scene | Iterations | Time (s) | Speed Up | Status |
-|-------|------------|----------|----------|--------|
-| **Stump** | **1000** | **139.46** | **+33.70%** | ✅ Success |
-| **Room** | **1000** | **143.98** | **+31.55%** | ✅ Success |
+| Scene            | Iterations     | Time (s)         | Speed Up          | Status     |
+| ---------------- | -------------- | ---------------- | ----------------- | ---------- |
+| **Stump**  | **1000** | **139.46** | **+33.70%** | ✅ Success |
+| **Room**   | **1000** | **143.98** | **+31.55%** | ✅ Success |
 | **Garden** | **1000** | **187.14** | **+11.03%** | ✅ Success |
 
 ### Key Optimizations
@@ -48,11 +48,11 @@ This repository provides a refactored codebase aimed at improving the flexibilit
 
 ## C2/C3 Optimization Analysis
 
-| Scheme | Name | Type | Status | Target Speed Up | Actual Speed Up |
-|--------|------|------|--------|----------------|----------------|
-| **C1** | Importance Guided Densification | Algorithm | ✅ Success | +5-10% | +11.03% ~ +33.70% |
-| **C2** | Enhanced Frustum Culling | Engineering | ⚠️ Data Anomaly | +20% | +3.72% |
-| **C3** | FP8 Mixed Precision Training | Precision | ❌ Failed | +25% | -1028% |
+| Scheme       | Name                            | Type        | Status            | Target Speed Up | Actual Speed Up   |
+| ------------ | ------------------------------- | ----------- | ----------------- | --------------- | ----------------- |
+| **C1** | Importance Guided Densification | Algorithm   | ✅ Success        | +5-10%          | +11.03% ~ +33.70% |
+| **C2** | Enhanced Frustum Culling        | Engineering | ⚠️ Data Anomaly | +20%            | +3.72%            |
+| **C3** | FP8 Mixed Precision Training    | Precision   | ❌ Failed         | +25%            | -1028%            |
 
 ## Background
 
@@ -196,6 +196,7 @@ axis_length=(coefficient*eigen_val.abs()).sqrt().ceil()
 ### C1 v2.1 Technical Details
 
 #### Theory
+
 - **Core Theory**: Importance sampling based on gradient variance
 - **Theoretical Basis**: Gradient variance reflects curvature information in parameter space, similar to Fisher information matrix diagonal approximation
 - **References**:
@@ -204,6 +205,7 @@ axis_length=(coefficient*eigen_val.abs()).sqrt().ceil()
   - This scheme uses gradient variance for lower computational cost
 
 #### Implementation
+
 ```python
 # Calculate importance score
 importance_score = torch.var(grad_xyz, dim=1) + torch.var(grad_opacity, dim=1) + torch.var(grad_scale, dim=1)
@@ -212,16 +214,19 @@ _, top_indices = torch.topk(importance_score, selected_count)
 ```
 
 #### Key Optimizations
+
 1. **Removed Hessian Approximation**: Reduced ~150μs per iteration
 2. **Global Normalization**: Reverted from O(N log N) quantile normalization to O(1) global normalization
 3. **Fixed Mixing Ratio**: Set to 85% importance + 15% random for consistent performance
 
 ### C2: Enhanced Frustum Culling
+
 - **Theory**: Margin-based frustum culling with adaptive strategies
 - **Implementation**: Added margin parameter and adaptive distance-based adjustment
 - **Status**: +3.72% speed up, needs further tuning
 
 ### C3: FP8 Mixed Precision Training
+
 - **Theory**: Using FP8 precision to reduce memory bandwidth and utilize Tensor Core acceleration
 - **Implementation**: Attempted implementation with GradScaler
 - **Status**: Failed implementation, needs re-evaluation

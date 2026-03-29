@@ -101,6 +101,12 @@ class PipelineParams(ParamGroup):
     C2_PHASE3_MEMORY_OPT = False          # 阶段 3：内存优化
     C2_PHASE4_PARALLEL = False            # 阶段 4：并行化
     
+    # C1 阶段性优化控制宏变量
+    C1_PHASE1_IMPORTANCE_GUIDED = False  # 阶段 1：重要性引导分裂（已启用）
+    C1_PHASE2_PARAM_SEARCH = False       # 阶段 2：参数网格搜索
+    C1_PHASE3_ADAPTIVE_MIXING = False    # 阶段 3：自适应混合策略
+    C1_PHASE4_DASHGAUSSIAN = False       # 阶段 4：DashGaussian 集成
+    
     # 阶段 1 参数（待优化）
     phase1_distance_k = 0.15
     phase1_velocity_k = 0.2
@@ -111,6 +117,23 @@ class PipelineParams(ParamGroup):
     
     # 阶段 3 参数
     phase3_optimize_memory = True  # 启用内存优化
+    
+    # C1 阶段 1 参数
+    phase1_importance_method = 'gradient_variance'  # 'gradient_variance' | 'hessian' | 'rendering_error'
+    phase1_top_k_ratio = 0.5  # 选择 top-K 的比例
+    
+    # C1 阶段 2 参数
+    phase2_search_method = 'bayesian'  # 'grid' | 'bayesian'
+    phase2_num_iterations = 40  # 贝叶斯优化迭代次数
+    
+    # C1 阶段 3 参数
+    phase3_mixing_strategy = 'linear'  # 'linear' | 'cosine' | 'step'
+    phase3_base_ratio = 0.7  # 基础重要性比例
+    phase3_enable_scene_adaptive = True  # 是否启用场景自适应
+    
+    # C1 阶段 4 参数
+    phase4_resolution_scales = [0.5, 0.75, 1.0]
+    phase4_resolution_milestones = [100, 500]
     
     def __init__(self, parser):
         super().__init__(parser, "Pipeline Parameters")

@@ -1,0 +1,20 @@
+{
+  "test_name": "C1_Phase1_Performance_Test",
+  "scene": "garden",
+  "iterations": 1000,
+  "baseline": {
+    "enable_phase1": false,
+    "total_time": 195.94,
+    "avg_iter_time": 0.19594,
+    "timestamp": "2026-03-29T11:32:22.526602"
+  },
+  "optimized": {
+    "enable_phase1": true,
+    "total_time": 189.5,
+    "avg_iter_time": 0.1895,
+    "timestamp": "2026-03-29T11:32:22.528149"
+  },
+  "improvement_percent": 3.28672042461978,
+  "acceptance_passed": true,
+  "timestamp": "2026-03-29T11:32:22.531375"
+}
