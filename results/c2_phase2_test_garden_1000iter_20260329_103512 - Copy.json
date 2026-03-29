@@ -1,0 +1,30 @@
+{
+  "test_name": "C2_Phase2_AABB_Cache_Test",
+  "scene": "garden",
+  "iterations": 1000,
+  "timestamp": "2026-03-29T10:35:12.129678",
+  "results": [
+    {
+      "name": "\u7981\u7528 AABB \u7f13\u5b58\uff08Baseline\uff09",
+      "config": {
+        "enable_cache": false
+      },
+      "performance": {
+        "total_time_seconds": 182.33034896850586,
+        "avg_time_per_iter": 0.18233034896850586
+      },
+      "timestamp": "2026-03-29T10:33:05.792925"
+    },
+    {
+      "name": "\u542f\u7528 AABB \u7f13\u5b58\uff08\u4f18\u5316\uff09",
+      "config": {
+        "enable_cache": true
+      },
+      "performance": {
+        "total_time_seconds": 126.33328914642334,
+        "avg_time_per_iter": 0.12633328914642333
+      },
+      "timestamp": "2026-03-29T10:35:12.126707"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "test_type": "C1_v2.1_Level2_PSNR_Clean",
+  "version": "2.1",
+  "config": {
+    "scene": "Garden",
+    "iterations": 1000,
+    "test_epochs": [
+      5
+    ]
+  },
+  "performance": {
+    "total_time_seconds": 198.5402159690857,
+    "avg_time_per_iteration": 0.1985402159690857
+  },
+  "timestamp": "2026-03-29T00:31:57.546048"
+}

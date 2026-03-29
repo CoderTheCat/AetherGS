@@ -1,0 +1,80 @@
+[
+  {
+    "test_type": "C2_Optimized_Multi_Scene_Test",
+    "version": "1.0",
+    "scene": "garden",
+    "config": {
+      "iterations": 1000,
+      "test_epochs": [
+        5
+      ],
+      "c2_settings": {
+        "use_enhanced_frustum_culling": true,
+        "use_adaptive_margin": true,
+        "margin_distance_k": 0.15,
+        "margin_velocity_k": 0.2,
+        "margin_density_k": 0.5,
+        "use_hierarchical_culling": true,
+        "coarse_chunk_size": 512,
+        "fine_chunk_size": 128
+      }
+    },
+    "performance": {
+      "total_time": 220.6570212841034,
+      "avg_iter_time": 0.2206570212841034
+    },
+    "timestamp": "2026-03-29T00:43:42.202279"
+  },
+  {
+    "test_type": "C2_Optimized_Multi_Scene_Test",
+    "version": "1.0",
+    "scene": "room",
+    "config": {
+      "iterations": 1000,
+      "test_epochs": [
+        5
+      ],
+      "c2_settings": {
+        "use_enhanced_frustum_culling": true,
+        "use_adaptive_margin": true,
+        "margin_distance_k": 0.15,
+        "margin_velocity_k": 0.2,
+        "margin_density_k": 0.5,
+        "use_hierarchical_culling": true,
+        "coarse_chunk_size": 512,
+        "fine_chunk_size": 128
+      }
+    },
+    "performance": {
+      "total_time": 103.0928099155426,
+      "avg_iter_time": 0.10309280991554261
+    },
+    "timestamp": "2026-03-29T00:45:25.301066"
+  },
+  {
+    "test_type": "C2_Optimized_Multi_Scene_Test",
+    "version": "1.0",
+    "scene": "stump",
+    "config": {
+      "iterations": 1000,
+      "test_epochs": [
+        5
+      ],
+      "c2_settings": {
+        "use_enhanced_frustum_culling": true,
+        "use_adaptive_margin": true,
+        "margin_distance_k": 0.15,
+        "margin_velocity_k": 0.2,
+        "margin_density_k": 0.5,
+        "use_hierarchical_culling": true,
+        "coarse_chunk_size": 512,
+        "fine_chunk_size": 128
+      }
+    },
+    "performance": {
+      "total_time": 86.84089493751526,
+      "avg_iter_time": 0.08684089493751526
+    },
+    "timestamp": "2026-03-29T00:46:52.147570"
+  }
+]

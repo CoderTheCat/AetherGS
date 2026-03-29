@@ -20,6 +20,27 @@ from ..utils.statistic_helper import StatisticsHelperInst
 from . import densify
 from .. import utils
 
+class TrainerState:
+    """训练状态管理器，用于缓存优化"""
+    def __init__(self):
+        # AABB 缓存状态
+        self.cluster_origin_cached = None
+        self.cluster_extend_cached = None
+        self.aabb_version = 0  # AABB 版本号
+        self.densify_version = 0  # densify 版本号
+        
+    def is_aabb_dirty(self):
+        """检查 AABB 是否需要更新"""
+        return self.aabb_version != self.densify_version
+    
+    def mark_aabb_clean(self):
+        """标记 AABB 为干净"""
+        self.aabb_version = self.densify_version
+    
+    def mark_densify_dirty(self):
+        """标记 densify 已发生，AABB 需要更新"""
+        self.densify_version += 1
+
 def __l1_loss(network_output:torch.Tensor, gt:torch.Tensor)->torch.Tensor:
     return torch.abs((network_output - gt)).mean()
 
@@ -97,13 +118,32 @@ def start(lp:arguments.ModelParams,op:arguments.OptimizationParams,pp:arguments.
     StatisticsHelperInst.reset(xyz.shape[-2],xyz.shape[-1],density_controller.is_densify_actived)
     progress_bar = tqdm(range(start_epoch, total_epoch), desc="Training progress")
     progress_bar.update(0)
+    
+    # 阶段 2 优化：AABB 缓存状态
+    trainer_state = TrainerState() if pp.C2_PHASE2_AABB_CACHE else None
 
     for epoch in range(start_epoch,total_epoch):
 
         with torch.no_grad():
             if pp.cluster_size>0 and (epoch-1)%dp.densification_interval==0:
                 xyz,scale,rot,sh_0,sh_rest,opacity=scene.spatial_refine(pp.cluster_size>0,opt,xyz)
-                cluster_origin,cluster_extend=scene.cluster.get_cluster_AABB(xyz,scale.exp(),torch.nn.functional.normalize(rot,dim=0))
+                
+                # 阶段 2 优化：仅在缓存未命中或禁用时重新计算 AABB
+                if trainer_state is None or trainer_state.is_aabb_dirty():
+                    cluster_origin,cluster_extend=scene.cluster.get_cluster_AABB(xyz,scale.exp(),torch.nn.functional.normalize(rot,dim=0))
+                    if trainer_state:
+                        trainer_state.cluster_origin_cached = cluster_origin
+                        trainer_state.cluster_extend_cached = cluster_extend
+                        trainer_state.mark_aabb_clean()
+                else:
+                    # 使用缓存的 AABB
+                    cluster_origin = trainer_state.cluster_origin_cached
+                    cluster_extend = trainer_state.cluster_extend_cached
+                
+                # 标记 densify 已发生
+                if trainer_state:
+                    trainer_state.mark_densify_dirty()
+                    
             if actived_sh_degree<lp.sh_degree:
                 actived_sh_degree=min(int(epoch/5),lp.sh_degree)
         torch.cuda.synchronize()

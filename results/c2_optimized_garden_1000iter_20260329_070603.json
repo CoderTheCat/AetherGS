@@ -1,0 +1,22 @@
+{
+  "test_name": "C2_Optimized_Enhanced_Frustum_Culling",
+  "scene": "garden",
+  "iterations": 1000,
+  "timestamp": "2026-03-29T07:06:03.609555",
+  "config": {
+    "enhanced_frustum_culling": true,
+    "culling_margin": 0.1,
+    "adaptive_culling": true,
+    "adaptive_margin": true,
+    "margin_distance_k": 0.1,
+    "margin_velocity_k": 0.2,
+    "margin_density_k": 0.5,
+    "hierarchical_culling": false,
+    "cache_frustum_planes": false
+  },
+  "performance": {
+    "total_time_seconds": 192.0764138698578,
+    "avg_time_per_iter": 0.1920764138698578
+  },
+  "results": {}
+}

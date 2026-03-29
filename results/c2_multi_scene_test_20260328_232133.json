@@ -1,0 +1,50 @@
+[
+  {
+    "test_name": "C2_Multi_Scene_Test",
+    "scene": "garden",
+    "iterations": 500,
+    "timestamp": "2026-03-28T23:18:30.262842",
+    "params": {
+      "margin_distance_k": 0.15,
+      "margin_velocity_k": 0.2,
+      "margin_density_k": 0.5
+    },
+    "performance": {
+      "total_time_seconds": 199.080304145813,
+      "avg_time_per_iter": 0.398160608291626
+    },
+    "results": {}
+  },
+  {
+    "test_name": "C2_Multi_Scene_Test",
+    "scene": "room",
+    "iterations": 500,
+    "timestamp": "2026-03-28T23:20:09.811333",
+    "params": {
+      "margin_distance_k": 0.15,
+      "margin_velocity_k": 0.2,
+      "margin_density_k": 0.5
+    },
+    "performance": {
+      "total_time_seconds": 99.54776310920715,
+      "avg_time_per_iter": 0.1990955262184143
+    },
+    "results": {}
+  },
+  {
+    "test_name": "C2_Multi_Scene_Test",
+    "scene": "stump",
+    "iterations": 500,
+    "timestamp": "2026-03-28T23:21:33.074058",
+    "params": {
+      "margin_distance_k": 0.15,
+      "margin_velocity_k": 0.2,
+      "margin_density_k": 0.5
+    },
+    "performance": {
+      "total_time_seconds": 83.26215529441833,
+      "avg_time_per_iter": 0.16652431058883668
+    },
+    "results": {}
+  }
+]

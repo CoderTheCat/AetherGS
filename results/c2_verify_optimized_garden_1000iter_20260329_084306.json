@@ -1,0 +1,22 @@
+{
+  "test_name": "C2_Verify_Optimized_Result",
+  "scene": "garden",
+  "iterations": 1000,
+  "timestamp": "2026-03-29T08:43:06.165999",
+  "config": {
+    "enhanced_frustum_culling": true,
+    "adaptive_margin": true,
+    "margin_distance_k": 0.15,
+    "margin_velocity_k": 0.2,
+    "margin_density_k": 0.5
+  },
+  "performance": {
+    "total_time_seconds": 170.95880270004272,
+    "avg_time_per_iter": 0.1709588027000427
+  },
+  "comparison": {
+    "historical_best": 144.95946049690247,
+    "difference": 25.99934220314026,
+    "difference_percent": 17.93559531335026
+  }
+}

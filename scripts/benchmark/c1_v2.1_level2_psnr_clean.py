@@ -13,14 +13,14 @@ from datetime import datetime
 # 添加项目根目录到路径
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from litegs.training.trainer import start
-import litegs.config
+from zephgs.training.trainer import start
+import zephgs.config
 
 def run_test(iterations=5000, output_path=None):
     """运行 C1 v2.1 Level 2 PSNR 测试 (关闭 DEBUG)"""
     
     # 获取默认参数
-    lp, op, pp, dp = litegs.config.get_default_arg()
+    lp, op, pp, dp = zephgs.config.get_default_arg()
     
     # 设置渐进式密度控制参数
     dp.progressive_mode = 'sigmoid'

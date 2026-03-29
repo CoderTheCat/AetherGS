@@ -1,0 +1,26 @@
+{
+  "test_type": "C2_Optimized_PSNR_Test",
+  "version": "1.0",
+  "config": {
+    "scene": "Garden",
+    "iterations": 1000,
+    "test_epochs": [
+      5
+    ],
+    "c2_settings": {
+      "use_enhanced_frustum_culling": true,
+      "use_adaptive_margin": true,
+      "margin_distance_k": 0.15,
+      "margin_velocity_k": 0.2,
+      "margin_density_k": 0.5,
+      "use_hierarchical_culling": true,
+      "coarse_chunk_size": 512,
+      "fine_chunk_size": 128
+    }
+  },
+  "performance": {
+    "total_time": 206.53008389472961,
+    "avg_iter_time": 0.20653008389472963
+  },
+  "timestamp": "2026-03-29T00:37:32.239891"
+}

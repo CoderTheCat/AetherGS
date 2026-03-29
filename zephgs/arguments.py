@@ -75,10 +75,43 @@ class PipelineParams(ParamGroup):
     enable_depth=False
     input_color_type='sh'#'rgb' or 'sh'
     
-    #视锥剔除增强参数
+    #视锥剔除增强参数 - C2优化
     enhanced_frustum_culling = False
     culling_margin = 0.1
     adaptive_culling = True
+    
+    #C2优化参数 - 自适应Margin
+    adaptive_margin = False  # 启用自适应margin
+    margin_distance_k = 0.1  # 距离因子系数
+    margin_velocity_k = 0.2  # 速度因子系数
+    margin_density_k = 0.5   # 密度因子系数
+    
+    #C2优化参数 - 层次化剔除
+    hierarchical_culling = False  # 启用层次化剔除
+    coarse_cluster_size = 512     # 粗粒度cluster大小
+    fine_cluster_size = 128       # 细粒度cluster大小
+    
+    #C2 优化参数 - 视锥平面缓存
+    cache_frustum_planes = False  # 启用视锥平面缓存
+    frustum_cache_threshold = 1e-6  # 缓存更新阈值
+    
+    # C2 阶段性优化控制宏变量
+    C2_PHASE1_PARAM_OPTIMIZATION = False  # 阶段 1：参数优化
+    C2_PHASE2_AABB_CACHE = False          # 阶段 2：AABB 缓存
+    C2_PHASE3_MEMORY_OPT = False          # 阶段 3：内存优化
+    C2_PHASE4_PARALLEL = False            # 阶段 4：并行化
+    
+    # 阶段 1 参数（待优化）
+    phase1_distance_k = 0.15
+    phase1_velocity_k = 0.2
+    phase1_density_k = 0.5
+    
+    # 阶段 2 参数
+    phase2_enable_aabb_cache = True  # 启用 AABB 缓存
+    
+    # 阶段 3 参数
+    phase3_optimize_memory = True  # 启用内存优化
+    
     def __init__(self, parser):
         super().__init__(parser, "Pipeline Parameters")
 

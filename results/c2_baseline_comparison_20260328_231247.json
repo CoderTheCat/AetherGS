@@ -1,0 +1,48 @@
+[
+  {
+    "test_name": "C2_Baseline_Comparison",
+    "config": "baseline",
+    "scene": "garden",
+    "iterations": 1000,
+    "timestamp": "2026-03-28T23:08:00.360160",
+    "performance": {
+      "total_time_seconds": 205.12890791893005,
+      "avg_time_per_iter": 0.20512890791893004
+    },
+    "results": {}
+  },
+  {
+    "test_name": "C2_Baseline_Comparison",
+    "config": "c2_default",
+    "scene": "garden",
+    "iterations": 1000,
+    "timestamp": "2026-03-28T23:10:23.614882",
+    "params": {
+      "margin_distance_k": 0.1,
+      "margin_velocity_k": 0.2,
+      "margin_density_k": 0.5
+    },
+    "performance": {
+      "total_time_seconds": 143.25433683395386,
+      "avg_time_per_iter": 0.14325433683395386
+    },
+    "results": {}
+  },
+  {
+    "test_name": "C2_Baseline_Comparison",
+    "config": "c2_optimized",
+    "scene": "garden",
+    "iterations": 1000,
+    "timestamp": "2026-03-28T23:12:47.472234",
+    "params": {
+      "margin_distance_k": 0.15,
+      "margin_velocity_k": 0.2,
+      "margin_density_k": 0.5
+    },
+    "performance": {
+      "total_time_seconds": 143.85684537887573,
+      "avg_time_per_iter": 0.14385684537887572
+    },
+    "results": {}
+  }
+]
